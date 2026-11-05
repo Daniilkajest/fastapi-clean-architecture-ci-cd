@@ -1,0 +1,38 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run tests and linters
+        run: echo "Run tests here..."
+
+  deploy_dev:
+    needs: test
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Build Docker Image
+        run: docker build -t raft-fastapi:latest .
+        
+      - name: Load Image to Minikube
+        run: minikube image load raft-fastapi:latest
+        
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/postgres.yaml
+          kubectl apply -f k8s/fastapi.yaml
+          kubectl rollout restart deployment fastapi-app
